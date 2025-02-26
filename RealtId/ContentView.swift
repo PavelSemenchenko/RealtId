@@ -7,6 +7,7 @@
 
 import SwiftUI
 import FirebaseFirestore
+import CallKit
 
 // Структура для записи о номере телефона
 struct CallerEntry: Identifiable, Codable {
@@ -20,6 +21,8 @@ struct CallerEntry: Identifiable, Codable {
 class CallerData: ObservableObject {
     @Published var entries: [CallerEntry] = []
     private var db = Firestore.firestore()
+    private let appGroup = "group.com.leksovich.RealtId"
+    // Замени на свой App Group
     
     init() {
         loadEntries()
@@ -40,8 +43,25 @@ class CallerData: ObservableObject {
                     entry?.id = document.documentID // Устанавливаем правильный ID из Firestore
                     return entry
                 }
+                
+                self.saveToAppGroup() // Сохраняем в App Group
+                self.reloadCallKitExtension() // Перезагружаем расширение
             }
     }
+    
+    private func saveToAppGroup() {
+            if let sharedDefaults = UserDefaults(suiteName: appGroup),
+               let encoded = try? JSONEncoder().encode(entries) {
+                sharedDefaults.set(encoded, forKey: "callerEntries")
+            }
+        }
+    private func reloadCallKitExtension() {
+            CXCallDirectoryManager.sharedInstance.reloadExtension(withIdentifier: "com.leksovich.RealtId.CallerIDExtension") { error in
+                if let error = error {
+                    print("Ошибка при перезагрузке расширения: \(error)")
+                }
+            }
+        }
     
     // Добавление записи в Firebase
     func addEntry(_ entry: CallerEntry) {
