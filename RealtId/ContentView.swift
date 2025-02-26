@@ -19,10 +19,10 @@ struct CallerEntry: Identifiable, Codable {
 
 // Класс для управления данными
 class CallerData: ObservableObject {
-    @Published var entries: [CallerEntry] = []
-    private var db = Firestore.firestore()
-    private let appGroup = "group.com.leksovich.RealtId"
-    // Замени на свой App Group
+    @Published var entries: [CallerEntry] = [] // Список записей
+    private var db = Firestore.firestore() // Подключение к Firestore
+    private let appGroup = "group.com.leksovich.RealtId" // App Group для обмена данными
+    private var lastEntriesHash: Int? // Хэш предыдущего состояния данных
     
     init() {
         loadEntries()
@@ -30,32 +30,44 @@ class CallerData: ObservableObject {
     
     // Загрузка данных из Firebase с сортировкой по номеру телефона
     func loadEntries() {
-        db.collection("callerEntries")
-            .order(by: "phoneNumber") // Сортировка по номеру телефона
-            .addSnapshotListener { querySnapshot, error in
-                if let error = error {
-                    print("Ошибка при загрузке данных: \(error.localizedDescription)")
-                    return
+            db.collection("callerEntries")
+                .order(by: "phoneNumber")
+                .addSnapshotListener { querySnapshot, error in
+                    if let error = error {
+                        print("Ошибка при загрузке данных: \(error.localizedDescription)")
+                        return
+                    }
+                    guard let documents = querySnapshot?.documents else { return }
+                    let newEntries = documents.compactMap { document in
+                        var entry = try? document.data(as: CallerEntry.self)
+                        entry?.id = document.documentID
+                        return entry
+                    }
+                    // Вычисляем хэш новых данных
+                    let newHash = self.hashEntries(newEntries)
+                    // Сравниваем с предыдущим хэшем
+                    if newHash != self.lastEntriesHash {
+                        self.entries = newEntries // Обновляем данные
+                        self.lastEntriesHash = newHash // Сохраняем новый хэш
+                        self.saveToAppGroup() // Сохраняем в App Group
+                        self.reloadCallKitExtension() // Перезагружаем расширение
+                    }
                 }
-                guard let documents = querySnapshot?.documents else { return }
-                self.entries = documents.compactMap { document in
-                    var entry = try? document.data(as: CallerEntry.self)
-                    entry?.id = document.documentID // Устанавливаем правильный ID из Firestore
-                    return entry
-                }
-                
-                self.saveToAppGroup() // Сохраняем в App Group
-                self.reloadCallKitExtension() // Перезагружаем расширение
-            }
-    }
+        }
+    // Функция для вычисления хэша записей
+        private func hashEntries(_ entries: [CallerEntry]) -> Int {
+            return entries.map { $0.phoneNumber.hashValue }.reduce(0, +)
+        }
     
-    private func saveToAppGroup() {
+    // Сохранение данных в App Group
+        private func saveToAppGroup() {
             if let sharedDefaults = UserDefaults(suiteName: appGroup),
                let encoded = try? JSONEncoder().encode(entries) {
                 sharedDefaults.set(encoded, forKey: "callerEntries")
             }
         }
-    private func reloadCallKitExtension() {
+    // Перезагрузка расширения CallKit
+        private func reloadCallKitExtension() {
             CXCallDirectoryManager.sharedInstance.reloadExtension(withIdentifier: "com.leksovich.RealtId.CallerIDExtension") { error in
                 if let error = error {
                     print("Ошибка при перезагрузке расширения: \(error)")
