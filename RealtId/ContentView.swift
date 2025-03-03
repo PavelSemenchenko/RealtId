@@ -1,12 +1,6 @@
-//
-//  ContentView.swift
-//  RealtId
-//
-//  Created by Pavel Semenchenko on 25.02.2025.
-//
-
 import SwiftUI
 import FirebaseFirestore
+import FirebaseAuth
 import CallKit
 
 // Структура для записи о номере телефона
@@ -30,61 +24,56 @@ class CallerData: ObservableObject {
     
     // Загрузка данных из Firebase с сортировкой по номеру телефона
     func loadEntries() {
-            db.collection("callerEntries")
-                .order(by: "phoneNumber")
-                .addSnapshotListener { querySnapshot, error in
-                    if let error = error {
-                        print("Ошибка при загрузке данных: \(error.localizedDescription)")
-                        return
-                    }
-                    guard let documents = querySnapshot?.documents else { return }
-                    let newEntries = documents.compactMap { document in
-                        var entry = try? document.data(as: CallerEntry.self)
-                        entry?.id = document.documentID
-                        return entry
-                    }
-                    // Вычисляем хэш новых данных
-                    let newHash = self.hashEntries(newEntries)
-                    // Сравниваем с предыдущим хэшем
-                    if newHash != self.lastEntriesHash {
-                        self.entries = newEntries // Обновляем данные
-                        self.lastEntriesHash = newHash // Сохраняем новый хэш
-                        self.saveToAppGroup() // Сохраняем в App Group
-                        self.reloadCallKitExtension() // Перезагружаем расширение
-                    }
+        db.collection("callerEntries")
+            .order(by: "phoneNumber")
+            .addSnapshotListener { querySnapshot, error in
+                if let error = error {
+                    print("Ошибка при загрузке данных: \(error.localizedDescription)")
+                    return
                 }
-        }
+                guard let documents = querySnapshot?.documents else { return }
+                let newEntries = documents.compactMap { document in
+                    var entry = try? document.data(as: CallerEntry.self)
+                    entry?.id = document.documentID
+                    return entry
+                }
+                let newHash = self.hashEntries(newEntries)
+                if newHash != self.lastEntriesHash {
+                    self.entries = newEntries // Обновляем данные
+                    self.lastEntriesHash = newHash
+                    self.saveToAppGroup()
+                    self.reloadCallKitExtension()
+                }
+            }
+    }
+    
     // Функция для вычисления хэша записей
-        private func hashEntries(_ entries: [CallerEntry]) -> Int {
-            return entries.map { $0.phoneNumber.hashValue }.reduce(0, +)
-        }
+    private func hashEntries(_ entries: [CallerEntry]) -> Int {
+        return entries.map { $0.phoneNumber.hashValue }.reduce(0, ^)
+    }
     
     // Сохранение данных в App Group
-        private func saveToAppGroup() {
-            if let sharedDefaults = UserDefaults(suiteName: appGroup),
-               let encoded = try? JSONEncoder().encode(entries) {
-                sharedDefaults.set(encoded, forKey: "callerEntries")
-            }
+    private func saveToAppGroup() {
+        if let sharedDefaults = UserDefaults(suiteName: appGroup),
+           let encoded = try? JSONEncoder().encode(entries) {
+            sharedDefaults.set(encoded, forKey: "callerEntries")
         }
+    }
+    
     // Перезагрузка расширения CallKit
-        private func reloadCallKitExtension() {
-            CXCallDirectoryManager.sharedInstance.reloadExtension(withIdentifier: "com.leksovich.RealtId.CallerIDExtension") { error in
-                if let error = error {
-                    print("Ошибка при перезагрузке расширения: \(error)")
-                }
+    private func reloadCallKitExtension() {
+        CXCallDirectoryManager.sharedInstance.reloadExtension(withIdentifier: "com.leksovich.RealtId.CallerIDExtension") { error in
+            if let error = error {
+                print("Ошибка при перезагрузке расширения: \(error)")
             }
         }
+    }
     
     // Добавление записи в Firebase
     func addEntry(_ entry: CallerEntry) {
         do {
-            let documentRef = try db.collection("callerEntries").addDocument(from: entry)
-            var newEntry = entry
-            newEntry.id = documentRef.documentID
-            DispatchQueue.main.async {
-                self.entries.append(newEntry)
-                self.entries.sort { $0.phoneNumber < $1.phoneNumber } // Локальная сортировка
-            }
+            _ = try db.collection("callerEntries").addDocument(from: entry)
+            // Локальное добавление не требуется, так как addSnapshotListener обновит entries
         } catch {
             print("Ошибка при добавлении: \(error.localizedDescription)")
         }
@@ -104,7 +93,6 @@ class CallerData: ObservableObject {
     
     // Преобразование номера телефона в формат CallKit
     func normalizePhoneNumber(_ rawNumber: String) -> String {
-        // Удаляем все символы, кроме цифр, включая "+"
         let digitsOnly = rawNumber.filter { $0.isNumber }
         return digitsOnly
     }
@@ -113,7 +101,9 @@ class CallerData: ObservableObject {
 // Главный экран приложения
 struct ContentView: View {
     @StateObject private var data = CallerData()
+    @StateObject private var loginVM = LoginVM()
     @State private var showingAddView = false
+    @State private var showingSplash = false
     
     var body: some View {
         NavigationView {
@@ -122,7 +112,7 @@ struct ContentView: View {
                     VStack(alignment: .leading) {
                         Text(entry.label)
                             .font(.headline)
-                        Text(formatPhoneNumber(entry.phoneNumber)) // Отображаем читаемый формат
+                        Text(formatPhoneNumber(entry.phoneNumber))
                             .font(.subheadline)
                             .foregroundColor(.gray)
                         if entry.isSpam {
@@ -141,9 +131,21 @@ struct ContentView: View {
                         Image(systemName: "plus")
                     }
                 }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        loginVM.signOut()
+                        showingSplash = true
+                    }) {
+                        Text("Выход")
+                    }
+                }
+                
             }
             .sheet(isPresented: $showingAddView) {
                 AddEntryView(data: data)
+            }
+            .fullScreenCover(isPresented: $showingSplash) {
+                SplashScreen()
             }
         }
     }
@@ -156,13 +158,13 @@ struct ContentView: View {
         }
     }
     
-    // Форматирование номера для отображения (например, "+380 (99) 675 28 79")
+    // Форматирование номера для отображения
     private func formatPhoneNumber(_ number: String) -> String {
-        guard number.count >= 9 else { return number } // Минимум для форматирования
-        let countryCode = String(number.prefix(3)) // "380"
-        let areaCode = String(number.dropFirst(3).prefix(2)) // "99"
-        let firstPart = String(number.dropFirst(5).prefix(3)) // "675"
-        let secondPart = String(number.dropFirst(8)) // "2879"
+        guard number.count >= 9 else { return number }
+        let countryCode = String(number.prefix(3))
+        let areaCode = String(number.dropFirst(3).prefix(2))
+        let firstPart = String(number.dropFirst(5).prefix(3))
+        let secondPart = String(number.dropFirst(8))
         return "+\(countryCode) (\(areaCode)) \(firstPart) \(secondPart)"
     }
 }
@@ -178,7 +180,8 @@ struct AddEntryView: View {
     var body: some View {
         NavigationView {
             Form {
-                TextField("Номер телефона (3801231234567)", text: $phoneNumber).keyboardType(UIKeyboardType.phonePad)
+                TextField("Номер телефона (3801231234567)", text: $phoneNumber)
+                    .keyboardType(.phonePad)
                 TextField("Метка (например, Агент)", text: $label)
                 Toggle("Спам", isOn: $isSpam)
             }
@@ -188,7 +191,7 @@ struct AddEntryView: View {
                     Button("Сохранить") {
                         let normalizedNumber = data.normalizePhoneNumber(phoneNumber)
                         let newEntry = CallerEntry(
-                            id: UUID().uuidString, // Временный ID, будет заменён Firestore
+                            id: UUID().uuidString, // Временный ID
                             phoneNumber: normalizedNumber,
                             label: label,
                             isSpam: isSpam
