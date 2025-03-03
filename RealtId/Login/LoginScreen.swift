@@ -51,7 +51,7 @@ struct LoginScreen: View {
                             Text(isRegistering ? "Регистрация" : "Войти")
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color.blue)
+                                .background(Color(red: 0/255, green: 66/255, blue: 64/255))
                                 .foregroundColor(.white)
                                 .cornerRadius(10)
                         }
