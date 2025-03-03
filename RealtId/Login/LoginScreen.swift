@@ -102,7 +102,12 @@ struct LoginScreen: View {
                         if newValue {
                             isLoggedIn = true
                         }
-                    }
+                    }/* для ios 17+
+                    .onChange(of: viewModel.isAuthenticated) { oldValue, newValue in
+                        if newValue {
+                            isLoggedIn = true
+                        }
+                    }*/
                 }
             }
         }
