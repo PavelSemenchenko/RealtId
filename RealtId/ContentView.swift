@@ -47,15 +47,15 @@ struct ContentView: View {
                     }
                 }
             }
-            .offset(y: -40)
+            //.offset(y: -30)
             .navigationTitle("RealtId")
-            .navigationBarTitleDisplayMode(.inline)
+            //.navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack {
                         Button(action: { showingAddView = true }) {
                             Image(systemName: "person.badge.plus")
-                        }
+                        }.padding()
                         Button(action: {
                             loginVM.signOut()
                             // Явно устанавливаем showingSplash после signOut
