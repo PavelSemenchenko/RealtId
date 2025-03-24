@@ -10,10 +10,12 @@ struct ContentView: View {
     @StateObject private var data = CallerData()
     @StateObject private var loginVM = LoginVM()
     @State private var showingAddView = false
+    @State private var showingEditView = false
     @State private var showingSplash = false
+    @State private var editingEntry: CallerEntry?
     
     var body: some View {
-        NavigationView {
+        NavigationStack { // Заменяем NavigationView на NavigationStack
             List {
                 ForEach(data.entries) { entry in
                     VStack(alignment: .leading) {
@@ -28,48 +30,50 @@ struct ContentView: View {
                                 .foregroundColor(.red)
                         }
                     }
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            data.deleteEntry(entry)
+                        } label: {
+                            Label("Удалить", systemImage: "trash")
+                        }
+                        
+                        Button {
+                            editingEntry = entry
+                            showingEditView = true
+                        } label: {
+                            Label("Редактировать", systemImage: "pencil")
+                        }
+                        .tint(.blue)
+                    }
                 }
-                .onDelete(perform: deleteEntries)
             }
-            .padding(.top, -80)
-            .navigationTitle("Realt Id").font(.headline)
+            .offset(y: -20)
+            .navigationTitle("RealtId")
             .navigationBarTitleDisplayMode(.inline)
-            
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingAddView = true }) {
-                        Image(systemName: "person.badge.shield.checkmark")
+                    HStack {
+                        Button(action: { showingAddView = true }) {
+                            Image(systemName: "person.badge.plus")
+                        }
+                        Button(action: {
+                            loginVM.signOut()
+                            showingSplash = true
+                        }) {
+                            Image(systemName: "xmark.circle")
+                        }
                     }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        loginVM.signOut()
-                        showingSplash = true
-                    }) {
-                        //Text("Выход")
-                        Image(systemName: "xmark.circle")
-                    }
-                }
-                
             }
             .sheet(isPresented: $showingAddView) {
-                AddEntryView(data: data)
+                AddEntryView(data: data, isEditing: false, entry: .constant(nil))
             }
-            .fullScreenCover(isPresented: $showingSplash) {
-                SplashScreen()
+            .sheet(isPresented: $showingEditView) {
+                AddEntryView(data: data, isEditing: true, entry: $editingEntry)
             }
         }
     }
     
-    // Функция удаления записи
-    private func deleteEntries(at offsets: IndexSet) {
-        offsets.forEach { index in
-            let entry = data.entries[index]
-            data.deleteEntry(entry)
-        }
-    }
-    
-    // Форматирование номера для отображения
     private func formatPhoneNumber(_ number: String) -> String {
         guard number.count >= 9 else { return number }
         let countryCode = String(number.prefix(3))
@@ -79,7 +83,6 @@ struct ContentView: View {
         return "+\(countryCode) (\(areaCode)) \(firstPart) \(secondPart)"
     }
 }
-
 
 
 #Preview {

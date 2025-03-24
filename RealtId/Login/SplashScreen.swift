@@ -72,7 +72,7 @@ struct SplashScreen: View {
                     }
                     
                     // Задержка перед переходом
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                         withAnimation {
                             isActive = true
                         }
