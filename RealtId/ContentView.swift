@@ -47,7 +47,7 @@ struct ContentView: View {
                     }
                 }
             }
-            .offset(y: -20)
+            .offset(y: -40)
             .navigationTitle("RealtId")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -58,7 +58,10 @@ struct ContentView: View {
                         }
                         Button(action: {
                             loginVM.signOut()
-                            showingSplash = true
+                            // Явно устанавливаем showingSplash после signOut
+                            DispatchQueue.main.async {
+                                showingSplash = true
+                            }
                         }) {
                             Image(systemName: "xmark.circle")
                         }
@@ -70,6 +73,11 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showingEditView) {
                 AddEntryView(data: data, isEditing: true, entry: $editingEntry)
+            }
+            .fullScreenCover(isPresented: $showingSplash, onDismiss: {
+                // Опционально: можно добавить логику после закрытия сплеш-скрина
+            }) {
+                SplashScreen()
             }
         }
     }
