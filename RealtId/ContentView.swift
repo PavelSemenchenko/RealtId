@@ -1,14 +1,8 @@
-/*
- давай теперь добавим чтобы при создании пользователя , было еще поле куда пользователь мог вводить секретный пароль = admin, если пароль ввел- то для него видна можножность добавлять контакты
- */
-
 
 import SwiftUI
 import FirebaseFirestore
 import FirebaseAuth
 import CallKit
-
-
 
 
 // Главный экран приложения
@@ -17,7 +11,7 @@ struct ContentView: View {
     @StateObject private var loginVM = LoginVM()
     @State private var showingAddView = false
     @State private var showingSplash = false
-
+    
     var body: some View {
         NavigationView {
             List {
@@ -37,11 +31,14 @@ struct ContentView: View {
                 }
                 .onDelete(perform: deleteEntries)
             }
-            .navigationTitle("RealtId")
+            .padding(.top, -80)
+            .navigationTitle("Realt Id").font(.headline)
+            .navigationBarTitleDisplayMode(.inline)
+            
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingAddView = true }) {
-                        Image(systemName: "plus")
+                        Image(systemName: "person.badge.shield.checkmark")
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -49,10 +46,11 @@ struct ContentView: View {
                         loginVM.signOut()
                         showingSplash = true
                     }) {
-                        Text("Выход")
+                        //Text("Выход")
+                        Image(systemName: "xmark.circle")
                     }
                 }
-
+                
             }
             .sheet(isPresented: $showingAddView) {
                 AddEntryView(data: data)
@@ -62,7 +60,7 @@ struct ContentView: View {
             }
         }
     }
-
+    
     // Функция удаления записи
     private func deleteEntries(at offsets: IndexSet) {
         offsets.forEach { index in
@@ -70,7 +68,7 @@ struct ContentView: View {
             data.deleteEntry(entry)
         }
     }
-
+    
     // Форматирование номера для отображения
     private func formatPhoneNumber(_ number: String) -> String {
         guard number.count >= 9 else { return number }
@@ -82,41 +80,7 @@ struct ContentView: View {
     }
 }
 
-// Экран добавления новой записи
-struct AddEntryView: View {
-    @Environment(\.presentationMode) var presentationMode
-    @ObservedObject var data: CallerData
-    @State private var phoneNumber = ""
-    @State private var label = "Агент"
-    @State private var isSpam = false
 
-    var body: some View {
-        NavigationView {
-            Form {
-                TextField("Номер телефона (3801231234567)", text: $phoneNumber)
-                    .keyboardType(.phonePad)
-                TextField("Метка (например, Агент)", text: $label)
-                Toggle("Спам", isOn: $isSpam)
-            }
-            .navigationTitle("Добавить запись")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Сохранить") {
-                        let normalizedNumber = data.normalizePhoneNumber(phoneNumber)
-                        let newEntry = CallerEntry(
-                            id: UUID().uuidString, // Временный ID
-                            phoneNumber: normalizedNumber,
-                            label: label,
-                            isSpam: isSpam
-                        )
-                        data.addEntry(newEntry)
-                        presentationMode.wrappedValue.dismiss()
-                    }
-                }
-            }
-        }
-    }
-}
 
 #Preview {
     ContentView()
