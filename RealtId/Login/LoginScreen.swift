@@ -126,7 +126,6 @@ struct CodeInputView: View {
             ZStack { // Используем ZStack для наложения фона на весь экран
                 Color.red // Красный фон на весь экран
                     .edgesIgnoringSafeArea(.all) // Фон занимает всю область экрана, включая безопасные зоны
-                
                 VStack(spacing: 20) {
                     Text("Введите регистрационный код")
                         .font(.headline)
@@ -161,7 +160,7 @@ struct CodeInputView: View {
     }
 }
 
-// Экран сброса пароля (без изменений)
+
 struct ResetPasswordView: View {
     @ObservedObject var viewModel: LoginVM
     @Binding var email: String
@@ -176,6 +175,7 @@ struct ResetPasswordView: View {
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .autocapitalization(.none)
                 .keyboardType(.emailAddress)
+                .padding()
             
             Button("Отправить ссылку для сброса") {
                 viewModel.resetPassword(email: email)

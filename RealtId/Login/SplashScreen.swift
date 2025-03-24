@@ -23,8 +23,7 @@ struct SplashScreen: View {
                     LoginScreen()
                 }
             } else {
-                ZStack { // Используем ZStack для наложения элементов
-                    // Фон с градиентом
+                ZStack {
                     LinearGradient(
                         gradient: Gradient(colors: [
                             Color(red: 0/255, green: 66/255, blue: 64/255), // #004240 (тёмно-зелёный внизу)
@@ -34,22 +33,19 @@ struct SplashScreen: View {
                         startPoint: .bottom,
                         endPoint: .top
                     )
-                    .edgesIgnoringSafeArea(.all) // Фон на весь экран
+                    .edgesIgnoringSafeArea(.all)
                     
                     VStack {
-                        // Логотип: пин и текст "057"
                         HStack(spacing: 10) {
-                            Image(systemName: "location.north.fill") // Пин (иконка местоположения)
+                            Image(systemName: "location.north.fill")
                                 .font(.system(size: 50))
                                 .foregroundColor(.white)
-                                .rotationEffect(.degrees(animationProgress * 360)) // Вращение пина
-                            
+                                .rotationEffect(.degrees(animationProgress * 360))
                             Text("057")
                                 .font(.system(size: 50, weight: .bold))
                                 .foregroundColor(.white)
                                 .opacity(textOpacity) // Прозрачность текста
                         }
-                        
                         HStack(spacing: 5) {
                             Image(systemName: "circle.fill")
                                 .font(.system(size: 15))

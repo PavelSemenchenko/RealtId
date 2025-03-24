@@ -22,11 +22,11 @@ class CallerData: ObservableObject {
     private var db = Firestore.firestore() // Подключение к Firestore
     private let appGroup = "group.com.leksovich.RealtId" // App Group для обмена данными
     private var lastEntriesHash: Int? // Хэш предыдущего состояния данных
-    
+
     init() {
         loadEntries()
     }
-    
+
     // Загрузка данных из Firebase с сортировкой по номеру телефона
     func loadEntries() {
         db.collection("callerEntries")
@@ -51,12 +51,12 @@ class CallerData: ObservableObject {
                 }
             }
     }
-    
+
     // Функция для вычисления хэша записей
     private func hashEntries(_ entries: [CallerEntry]) -> Int {
         return entries.map { $0.phoneNumber.hashValue }.reduce(0, ^)
     }
-    
+
     // Сохранение данных в App Group
     private func saveToAppGroup() {
         if let sharedDefaults = UserDefaults(suiteName: appGroup),
@@ -64,7 +64,7 @@ class CallerData: ObservableObject {
             sharedDefaults.set(encoded, forKey: "callerEntries")
         }
     }
-    
+
     // Перезагрузка расширения CallKit
     private func reloadCallKitExtension() {
         CXCallDirectoryManager.sharedInstance.reloadExtension(withIdentifier: "com.leksovich.RealtId.CallerIDExtension") { error in
@@ -73,7 +73,7 @@ class CallerData: ObservableObject {
             }
         }
     }
-    
+
     // Добавление записи в Firebase
     func addEntry(_ entry: CallerEntry) {
         do {
@@ -83,7 +83,7 @@ class CallerData: ObservableObject {
             print("Ошибка при добавлении: \(error.localizedDescription)")
         }
     }
-    
+
     // Удаление записи из Firebase
     func deleteEntry(_ entry: CallerEntry) {
         print("Попытка удаления документа с ID: \(entry.id)")
@@ -95,7 +95,7 @@ class CallerData: ObservableObject {
             }
         }
     }
-    
+
     // Преобразование номера телефона в формат CallKit
     func normalizePhoneNumber(_ rawNumber: String) -> String {
         let digitsOnly = rawNumber.filter { $0.isNumber }
@@ -109,7 +109,7 @@ struct ContentView: View {
     @StateObject private var loginVM = LoginVM()
     @State private var showingAddView = false
     @State private var showingSplash = false
-    
+
     var body: some View {
         NavigationView {
             List {
@@ -144,7 +144,7 @@ struct ContentView: View {
                         Text("Выход")
                     }
                 }
-                
+
             }
             .sheet(isPresented: $showingAddView) {
                 AddEntryView(data: data)
@@ -154,7 +154,7 @@ struct ContentView: View {
             }
         }
     }
-    
+
     // Функция удаления записи
     private func deleteEntries(at offsets: IndexSet) {
         offsets.forEach { index in
@@ -162,7 +162,7 @@ struct ContentView: View {
             data.deleteEntry(entry)
         }
     }
-    
+
     // Форматирование номера для отображения
     private func formatPhoneNumber(_ number: String) -> String {
         guard number.count >= 9 else { return number }
@@ -181,7 +181,7 @@ struct AddEntryView: View {
     @State private var phoneNumber = ""
     @State private var label = "Агент"
     @State private var isSpam = false
-    
+
     var body: some View {
         NavigationView {
             Form {
