@@ -81,15 +81,15 @@ struct ContentView: View {
             }
         }
     }
-    
     private func formatPhoneNumber(_ number: String) -> String {
-        guard number.count >= 9 else { return number }
-        let countryCode = String(number.prefix(3))
-        let areaCode = String(number.dropFirst(3).prefix(2))
-        let firstPart = String(number.dropFirst(5).prefix(3))
-        let secondPart = String(number.dropFirst(8))
-        return "+\(countryCode) (\(areaCode)) \(firstPart) \(secondPart)"
-    }
+            let digits = number.filter { $0.isNumber }
+            guard digits.count >= 10 else { return digits } // Минимально 10 цифр: +38 (068) 888 0168
+            let countryCode = String(digits.prefix(2)) // +38
+            let areaCode = String(digits.dropFirst(2).prefix(3)) // (068)
+            let firstPart = String(digits.dropFirst(5).prefix(3)) // 888
+            let secondPart = String(digits.dropFirst(8)) // 0168
+            return "+\(countryCode) (\(areaCode)) \(firstPart) \(secondPart)"
+        }
 }
 
 
